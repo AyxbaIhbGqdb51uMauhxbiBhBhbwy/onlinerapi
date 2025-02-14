@@ -68,8 +68,9 @@ def onliner(token, status, custom_status, onliner_name):
             ws.send(json.dumps(online))
     
     thread = threading.Thread(target=keep_alive)
+    thread.daemon = True  # Set thread sebagai daemon agar berhenti saat program utama berhenti
     thread.start()
-    onliners[onliner_name] = {"ws": ws, "token": token}
+    onliners[onliner_name] = {"ws": ws, "token": token, "thread": thread}
     return True
 
 @app.route("/onliner", methods=["GET"])
@@ -104,4 +105,11 @@ def get_data():
     return jsonify({"onliners": [{"onliner_name": name, "token": data["token"]} for name, data in onliners.items()]})
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Jalankan Flask dalam thread terpisah
+    flask_thread = threading.Thread(target=app.run, kwargs={"debug": True})
+    flask_thread.daemon = True
+    flask_thread.start()
+
+    # Jalankan loop utama untuk menjaga thread WebSocket tetap hidup
+    while True:
+        time.sleep(1)
